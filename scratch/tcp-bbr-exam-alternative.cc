@@ -25,7 +25,7 @@ Ptr<OutputStreamWrapper> inFlightStream;
 uint32_t cWndValue;
 uint32_t ssThreshValue;
 bool m_state = false;
-
+/*
 static void ChangeDataRate ()
 {
   if (!m_state)
@@ -42,7 +42,7 @@ static void ChangeDataRate ()
     }
     Simulator::Schedule (Seconds (20), ChangeDataRate);
 }
-
+*/
 static void
 CwndTracer (uint32_t oldval, uint32_t newval)
 {
@@ -161,7 +161,7 @@ int main (int argc, char *argv[])
   std::string delay = "18ms";
   std::string access_bandwidth = "40Mbps";
   std::string access_delay = "1ms";
-  std::string transport_prot = "TcpBbrAdaptive";
+  std::string transport_prot = "TcpBbr";
 
   std::string scenario = "1";
 
@@ -193,7 +193,7 @@ int main (int argc, char *argv[])
   cmd.AddValue ("transport_prot", "Transport protocol to use: TcpNewReno, "
                 "TcpHybla, TcpHighSpeed, TcpHtcp, TcpVegas, TcpScalable, TcpVeno, "
                 "TcpBic, TcpYeah, TcpIllinois, TcpWestwood, TcpWestwoodPlus, TcpLedbat, "
-                "TcpLp, TcpBbr, TcpBbrAlternative", transport_prot);
+                "TcpLp, TcpBbr", transport_prot);
   cmd.Parse (argc,argv);
 
   // Calculate the ADU size
@@ -280,12 +280,13 @@ int main (int argc, char *argv[])
       sinkApp.Add (sinkHelper.Install (d.GetRight (i)));
     }
 
-  PacketSinkHelper udpSink ("ns3::UdpSocketFactory",
+  PacketSinkHelper udpSink ("ns3::TcpSocketFactory",
                             Address (InetSocketAddress (Ipv4Address::GetAny (), port)));
   sinkApp.Add (udpSink.Install (d.GetRight (nLeaf)));
   sinkApp.Start (Seconds (start_time));
   sinkApp.Stop (Seconds (stop_time));
-
+  ApplicationContainer sourceApp;
+/*
   BulkSendHelper ftp ("ns3::TcpSocketFactory", Address ());
   ftp.SetAttribute ("MaxBytes", UintegerValue (int(data_mbytes * 1000000)));
   ftp.SetAttribute ("SendSize", UintegerValue (tcp_adu_size));
@@ -299,13 +300,13 @@ int main (int argc, char *argv[])
       sourceApp = ftp.Install (d.GetLeft (i));
       sourceApp.Start (Seconds (start_time + i * 0.1));
       sourceApp.Stop (Seconds (stop_time - 1));
-    }
+    }*/
 
   AddressValue remoteAddress (InetSocketAddress (d.GetRightIpv4Address (nLeaf), port));
-  OnOffHelper onOffHelper ("ns3::UdpSocketFactory", Address ());
+  OnOffHelper onOffHelper ("ns3::TcpSocketFactory", Address ());
   onOffHelper.SetConstantRate (DataRate ("1Mbps"));
-  onOffHelper.SetAttribute ("OnTime", StringValue ("ns3::ConstantRandomVariable[Constant=0.01]"));
-  onOffHelper.SetAttribute ("OffTime", StringValue ("ns3::ConstantRandomVariable[Constant=10]"));
+  onOffHelper.SetAttribute ("OnTime", StringValue ("ns3::ConstantRandomVariable[Constant=1]"));
+  onOffHelper.SetAttribute ("OffTime", StringValue ("ns3::ConstantRandomVariable[Constant=0]"));
   onOffHelper.SetAttribute ("Remote", remoteAddress);
 
   sourceApp = onOffHelper.Install (d.GetLeft (nLeaf));
@@ -324,11 +325,11 @@ int main (int argc, char *argv[])
   Simulator::Schedule (Seconds (start_time + 0.000001), &TraceRto, dir + "rto.data");
   Simulator::Schedule (Seconds (start_time + 0.000001), &TraceInFlight, dir + "inflight.data");
 
-  if (scenario == "2")
+ /* if (scenario == "2")
     {
       Simulator::Schedule (Seconds (20), &ChangeDataRate);
     }
-
+*/
 //  GtkConfigStore configstore;
 //  configstore.ConfigureAttributes ();
 //  configstore.ConfigureDefaults ();

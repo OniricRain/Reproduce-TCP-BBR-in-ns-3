@@ -1,16 +1,12 @@
-#include <iostream>
-#include <fstream>
-#include "ns3/gtk-config-store.h"
 #include "ns3/core-module.h"
 #include "ns3/network-module.h"
 #include "ns3/internet-module.h"
 #include "ns3/point-to-point-module.h"
-#include "ns3/netanim-module.h"
 #include "ns3/applications-module.h"
-#include "ns3/point-to-point-layout-module.h"
-#include "ns3/flow-monitor-module.h"
 
 using namespace ns3;
+
+NS_LOG_COMPONENT_DEFINE ("BBR_Example");
 
 bool firstCwnd = true;
 bool firstSshThr = true;
@@ -24,23 +20,12 @@ Ptr<OutputStreamWrapper> rtoStream;
 Ptr<OutputStreamWrapper> inFlightStream;
 uint32_t cWndValue;
 uint32_t ssThreshValue;
-bool m_state = false;
+//bool m_state = false;
 
 static void ChangeDataRate ()
 {
-  if (!m_state)
-    {
-      Config::Set ("/NodeList/0/DeviceList/0/DataRate", StringValue ("10Mbps"));
-      Config::Set ("/NodeList/1/DeviceList/0/DataRate", StringValue ("10Mbps"));
-      m_state = false;
-    }
-  else
-    {
       Config::Set ("/NodeList/0/DeviceList/0/DataRate", StringValue ("20Mbps"));
       Config::Set ("/NodeList/1/DeviceList/0/DataRate", StringValue ("20Mbps"));
-      m_state = true;
-    }
-    Simulator::Schedule (Seconds (20), ChangeDataRate);
 }
 
 static void
@@ -110,7 +95,7 @@ TraceCwnd (std::string cwnd_tr_file_name)
 {
   AsciiTraceHelper ascii;
   cWndStream = ascii.CreateFileStream (cwnd_tr_file_name.c_str ());
-  Config::ConnectWithoutContext ("/NodeList/2/$ns3::TcpL4Protocol/SocketList/0/CongestionWindow", MakeCallback (&CwndTracer));
+  Config::ConnectWithoutContext ("/NodeList/0/$ns3::TcpL4Protocol/SocketList/0/CongestionWindow", MakeCallback (&CwndTracer));
 }
 
 static void
@@ -118,7 +103,7 @@ TraceSsThresh (std::string ssthresh_tr_file_name)
 {
   AsciiTraceHelper ascii;
   ssThreshStream = ascii.CreateFileStream (ssthresh_tr_file_name.c_str ());
-  Config::ConnectWithoutContext ("/NodeList/2/$ns3::TcpL4Protocol/SocketList/0/SlowStartThreshold", MakeCallback (&SsThreshTracer));
+  Config::ConnectWithoutContext ("/NodeList/0/$ns3::TcpL4Protocol/SocketList/0/SlowStartThreshold", MakeCallback (&SsThreshTracer));
 }
 
 static void
@@ -126,7 +111,7 @@ TraceRtt (std::string rtt_tr_file_name)
 {
   AsciiTraceHelper ascii;
   rttStream = ascii.CreateFileStream (rtt_tr_file_name.c_str ());
-  Config::ConnectWithoutContext ("/NodeList/2/$ns3::TcpL4Protocol/SocketList/0/RTT", MakeCallback (&RttTracer));
+  Config::ConnectWithoutContext ("/NodeList/0/$ns3::TcpL4Protocol/SocketList/0/RTT", MakeCallback (&RttTracer));
 }
 
 static void
@@ -134,7 +119,7 @@ TraceRto (std::string rto_tr_file_name)
 {
   AsciiTraceHelper ascii;
   rtoStream = ascii.CreateFileStream (rto_tr_file_name.c_str ());
-  Config::ConnectWithoutContext ("/NodeList/2/$ns3::TcpL4Protocol/SocketList/0/RTO", MakeCallback (&RtoTracer));
+  Config::ConnectWithoutContext ("/NodeList/0/$ns3::TcpL4Protocol/SocketList/0/RTO", MakeCallback (&RtoTracer));
 }
 
 static void
@@ -142,30 +127,25 @@ TraceInFlight (std::string &in_flight_file_name)
 {
   AsciiTraceHelper ascii;
   inFlightStream = ascii.CreateFileStream (in_flight_file_name.c_str ());
-  Config::ConnectWithoutContext ("/NodeList/2/$ns3::TcpL4Protocol/SocketList/0/BytesInFlight", MakeCallback (&InFlightTracer));
+  Config::ConnectWithoutContext ("/NodeList/0/$ns3::TcpL4Protocol/SocketList/0/BytesInFlight", MakeCallback (&InFlightTracer));
 }
 
-
-int main (int argc, char *argv[])
+int
+main (int argc, char *argv[])
 {
+
   double minRto = 0.2;
   uint32_t initialCwnd = 10;
   double error_p = 0.00;
-  uint32_t size  = 3;
-  uint32_t    nLeaf = 1; // If non-zero, number of both left and right
   double start_time = 0.01;
   double stop_time = 100;
   double data_mbytes = 0;
   uint32_t mtu_bytes = 536;
   std::string bandwidth = "10Mbps";
-  std::string delay = "18ms";
-  std::string access_bandwidth = "40Mbps";
-  std::string access_delay = "1ms";
-  std::string transport_prot = "TcpBbrAdaptive";
+  std::string delay = "2ms";
+  std::string transport_prot = "TcpBbr";
 
-  std::string scenario = "1";
-
- time_t rawtime;
+  time_t rawtime;
   struct tm * timeinfo;
   char buffer[80];
 
@@ -175,26 +155,25 @@ int main (int argc, char *argv[])
   strftime(buffer,sizeof(buffer),"%d-%m-%Y-%I-%M-%S",timeinfo);
   std::string currentTime (buffer);
 
+  LogComponentEnable ("UdpEchoClientApplication", LOG_LEVEL_INFO);
+  LogComponentEnable ("UdpEchoServerApplication", LOG_LEVEL_INFO);
+
   CommandLine cmd;
-  cmd.AddValue ("nLeaf",     "Number of left and right side leaf nodes", nLeaf);
   cmd.AddValue ("bandwidth", "Bottleneck bandwidth", bandwidth);
   cmd.AddValue ("delay", "Bottleneck delay", delay);
-  cmd.AddValue ("access_bandwidth", "Access link bandwidth", access_bandwidth);
-  cmd.AddValue ("access_delay", "Access link delay", access_delay);
   cmd.AddValue ("mtu", "Size of IP packets to send in bytes", mtu_bytes);
   cmd.AddValue ("data", "Number of Megabytes of data to transmit", data_mbytes);
   cmd.AddValue ("error_p", "Packet error rate", error_p);
-  cmd.AddValue ("qSize", "Queue Size", size);
   cmd.AddValue ("start_time", "Start Time", start_time);
   cmd.AddValue ("stop_time", "Stop Time", stop_time);
-  cmd.AddValue ("scenario", "Scenario", scenario);
+  //cmd.AddValue ("scenario", "Scenario", scenario);
   cmd.AddValue ("initialCwnd", "Initial Cwnd", initialCwnd);
   cmd.AddValue ("minRto", "Minimum RTO", minRto);
   cmd.AddValue ("transport_prot", "Transport protocol to use: TcpNewReno, "
                 "TcpHybla, TcpHighSpeed, TcpHtcp, TcpVegas, TcpScalable, TcpVeno, "
                 "TcpBic, TcpYeah, TcpIllinois, TcpWestwood, TcpWestwoodPlus, TcpLedbat, "
-                "TcpLp, TcpBbr, TcpBbrAlternative", transport_prot);
-  cmd.Parse (argc,argv);
+                "TcpLp, TcpBbr", transport_prot);
+  cmd.Parse (argc, argv);
 
   // Calculate the ADU size
   Header* temp_header = new Ipv4Header ();
@@ -207,18 +186,8 @@ int main (int argc, char *argv[])
   uint32_t tcp_adu_size = mtu_bytes - 20 - (ip_header + tcp_header);
 
   Config::SetDefault ("ns3::TcpSocket::SegmentSize", UintegerValue (tcp_adu_size));
-
-  DataRate access_b (access_bandwidth);
-  DataRate bottle_b (bandwidth);
-  Time access_d (access_delay);
-  Time bottle_d (delay);
-
-  if (size != 0)
-    {
-      size *= (std::min (access_b, bottle_b).GetBitRate () / 8) * ((access_d + bottle_d) * 2).GetSeconds ();
-      Config::SetDefault ("ns3::PfifoFastQueueDisc::Limit", UintegerValue (size / mtu_bytes));
-    }
-
+  
+  //Time::SetResolution (Time::NS);
 
   Config::SetDefault ("ns3::TcpSocket::InitialCwnd", UintegerValue (initialCwnd));
   Config::SetDefault ("ns3::TcpSocketBase::MinRto", TimeValue (Seconds (minRto)));
@@ -246,43 +215,39 @@ int main (int argc, char *argv[])
   error_model.SetUnit (RateErrorModel::ERROR_UNIT_PACKET);
   error_model.SetRate (error_p);
 
-  // Create the point-to-point link helpers
-  PointToPointHelper pointToPointRouter;
-  pointToPointRouter.SetDeviceAttribute  ("DataRate", StringValue (bandwidth));
-  pointToPointRouter.SetChannelAttribute ("Delay", StringValue (delay));
-  pointToPointRouter.SetDeviceAttribute ("ReceiveErrorModel", PointerValue (&error_model));
 
-  PointToPointHelper pointToPointLeaf;
-  pointToPointLeaf.SetDeviceAttribute    ("DataRate", StringValue (access_bandwidth));
-  pointToPointLeaf.SetChannelAttribute   ("Delay", StringValue (access_delay));
+  NodeContainer nodes;
+  nodes.Create (2);
 
-  PointToPointDumbbellHelper d (nLeaf + 1, pointToPointLeaf,
-                                nLeaf + 1, pointToPointLeaf,
-                                pointToPointRouter);
+  PointToPointHelper pointToPoint;
+  pointToPoint.SetDeviceAttribute  ("DataRate", StringValue (bandwidth));
+  pointToPoint.SetChannelAttribute ("Delay", StringValue (delay));
+  pointToPoint.SetDeviceAttribute ("ReceiveErrorModel", PointerValue (&error_model));
+
+  NetDeviceContainer devices;
+  devices = pointToPoint.Install (nodes);
 
   // Install Stack
   InternetStackHelper stack;
-  d.InstallStack (stack);
+  stack.Install (nodes);
 
   // Assign IP Addresses
-  d.AssignIpv4Addresses (Ipv4AddressHelper ("10.1.1.0", "255.255.255.0"),
-                         Ipv4AddressHelper ("10.2.1.0", "255.255.255.0"),
-                         Ipv4AddressHelper ("10.3.1.0", "255.255.255.0"));
+  Ipv4AddressHelper address;
+  address.SetBase ("10.1.1.0", "255.255.255.0");
+
+  Ipv4InterfaceContainer interfaces = address.Assign (devices);
 
   // Install app on all right side nodes
   uint16_t port = 50000;
-  Address sinkLocalAddress (InetSocketAddress (Ipv4Address::GetAny (), port));
+  Address sinkLocalAddress (InetSocketAddress (interfaces.GetAddress (1), port));
   PacketSinkHelper sinkHelper ("ns3::TcpSocketFactory", sinkLocalAddress);
   ApplicationContainer sinkApp;
-
-  for (uint16_t i = 0; i < nLeaf; i++)
-    {
-      sinkApp.Add (sinkHelper.Install (d.GetRight (i)));
-    }
+  sinkApp.Add (sinkHelper.Install (nodes.Get (1)));
+  
 
   PacketSinkHelper udpSink ("ns3::UdpSocketFactory",
-                            Address (InetSocketAddress (Ipv4Address::GetAny (), port)));
-  sinkApp.Add (udpSink.Install (d.GetRight (nLeaf)));
+                            Address (InetSocketAddress (interfaces.GetAddress (1), port)));
+  sinkApp.Add (udpSink.Install (nodes.Get (1)));
   sinkApp.Start (Seconds (start_time));
   sinkApp.Stop (Seconds (stop_time));
 
@@ -292,29 +257,31 @@ int main (int argc, char *argv[])
 
   ApplicationContainer sourceApp;
 
-  for (uint32_t i = 0; i < nLeaf; ++i)
-    {
-      AddressValue remoteAddress (InetSocketAddress (d.GetRightIpv4Address (i), port));
-      ftp.SetAttribute ("Remote", remoteAddress);
-      sourceApp = ftp.Install (d.GetLeft (i));
-      sourceApp.Start (Seconds (start_time + i * 0.1));
-      sourceApp.Stop (Seconds (stop_time - 1));
-    }
-
-  AddressValue remoteAddress (InetSocketAddress (d.GetRightIpv4Address (nLeaf), port));
-  OnOffHelper onOffHelper ("ns3::UdpSocketFactory", Address ());
-  onOffHelper.SetConstantRate (DataRate ("1Mbps"));
-  onOffHelper.SetAttribute ("OnTime", StringValue ("ns3::ConstantRandomVariable[Constant=0.01]"));
-  onOffHelper.SetAttribute ("OffTime", StringValue ("ns3::ConstantRandomVariable[Constant=10]"));
-  onOffHelper.SetAttribute ("Remote", remoteAddress);
-
-  sourceApp = onOffHelper.Install (d.GetLeft (nLeaf));
-  sourceApp.Start (Seconds (start_time));
+  AddressValue remoteAddress (InetSocketAddress (interfaces.GetAddress (0), port));
+  ftp.SetAttribute ("Remote", remoteAddress);
+  sourceApp = ftp.Install (nodes.Get (0));
+  sourceApp.Start (Seconds (start_time + 0.1));
   sourceApp.Stop (Seconds (stop_time - 1));
 
-  // Set up the acutal simulation
-  Ipv4GlobalRoutingHelper::PopulateRoutingTables ();
 
+  /*
+  UdpEchoServerHelper echoServer (9);
+
+  ApplicationContainer serverApps = echoServer.Install (nodes.Get (1));
+  serverApps.Start (Seconds (start_time + 0.1));
+  serverApps.Stop (Seconds (stop_time - 1));
+
+  UdpEchoClientHelper echoClient (interfaces.GetAddress (1), 9);
+  //echoClient.SetAttribute ("MaxPackets", UintegerValue (2));
+  echoClient.SetAttribute ("Interval", TimeValue (Seconds (0.001)));
+  //echoClient.SetAttribute ("PacketSize", UintegerValue (1000));
+
+  ApplicationContainer clientApps = echoClient.Install (nodes.Get (0));
+  clientApps.Start (Seconds (start_time + 0.2));
+  clientApps.Stop (Seconds (stop_time - 1));
+  */
+
+  // Set up the acutal simulation
   std::string dir = "results/" + transport_prot.substr(5, transport_prot.length()) + "/" + currentTime + "/";
   std::string dirToSave = "mkdir -p " + dir;
   system (dirToSave.c_str ());
@@ -324,57 +291,15 @@ int main (int argc, char *argv[])
   Simulator::Schedule (Seconds (start_time + 0.000001), &TraceRto, dir + "rto.data");
   Simulator::Schedule (Seconds (start_time + 0.000001), &TraceInFlight, dir + "inflight.data");
 
-  if (scenario == "2")
-    {
-      Simulator::Schedule (Seconds (20), &ChangeDataRate);
-    }
+  Simulator::Schedule (Seconds(20) , &ChangeDataRate);
 
-//  GtkConfigStore configstore;
-//  configstore.ConfigureAttributes ();
-//  configstore.ConfigureDefaults ();
+  pointToPoint.EnablePcapAll (dir + "p", nodes.Get (0));
 
-  pointToPointRouter.EnablePcapAll (dir + "p", d.GetLeft ());
-
-  // 8. Install FlowMonitor on all nodes
-  FlowMonitorHelper flowmon;
-  Ptr<FlowMonitor> monitor = flowmon.InstallAll ();
-
-  std::ofstream myfile;
-  myfile.open (dir + "config.txt", std::fstream::in | std::fstream::out | std::fstream::app);
-  myfile << "nLeaf " << nLeaf << "\n";
-  myfile << "bandwidth " << bandwidth << "\n";
-  myfile << "delay  " << delay << "\n";
-  myfile << "access_bandwidth " << access_bandwidth << "\n";
-  myfile << "access_delay " << access_delay << "\n";
-  myfile << "mtu " << std::to_string(mtu_bytes) << "\n";
-  myfile << "data  " << std::to_string(data_mbytes) << "\n";
-  myfile << "error_p " << error_p << "\n";
-  myfile << "qSize " << size << "\n";
-  myfile << "scenario " << scenario << "\n";
-  myfile << "initialCwnd  " << initialCwnd << "\n";
-  myfile << "minRto " << minRto << "\n";
-  myfile << "transport_prot " << transport_prot << "\n";
-  myfile.close();
 
   Simulator::Stop (Seconds (stop_time + 1));
+
   Simulator::Run ();
-
-  monitor->CheckForLostPackets ();
-  Ptr<Ipv4FlowClassifier> classifier = DynamicCast<Ipv4FlowClassifier> (flowmon.GetClassifier ());
-  FlowMonitor::FlowStatsContainer stats = monitor->GetFlowStats ();
-  for (std::map<FlowId, FlowMonitor::FlowStats>::const_iterator i = stats.begin (); i != stats.end (); ++i)
-    {
-      Ipv4FlowClassifier::FiveTuple t = classifier->FindFlow (i->first);
-      std::cout << "Flow " << i->first << " (" << t.sourceAddress << " -> " << t.destinationAddress << ")\n";
-      std::cout << "  Tx Packets: " << i->second.txPackets << "\n";
-      std::cout << "  Tx Bytes:   " << i->second.txBytes << "\n";
-      std::cout << "  TxOffered:  " << i->second.txBytes * 8.0 / 9.0 / 1000 / 1000  << " Mbps\n";
-      std::cout << "  Rx Packets: " << i->second.rxPackets << "\n";
-      std::cout << "  Rx Bytes:   " << i->second.rxBytes << "\n";
-      std::cout << "  Throughput: " << i->second.rxBytes * 8.0 / 9.0 / 1000 / 1000  << " Mbps\n";
-    }
-
-
   Simulator::Destroy ();
   return 0;
+
 }
