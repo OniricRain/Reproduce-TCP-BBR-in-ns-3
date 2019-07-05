@@ -29,10 +29,12 @@ namespace ns3 {
 NS_LOG_COMPONENT_DEFINE ("TcpBbrAdaptive");
 NS_OBJECT_ENSURE_REGISTERED (TcpBbrAdaptive);
 
-//const double TcpBbrAdaptive::PACING_GAIN_CYCLE [] = {5.0 / 4, 3.0 / 4, 1, 1, 1, 1, 1, 1};
-std::vector<double> pacing_gain_cycle = {5.0 / 4, 3.0 / 4, 1, 1, 1, 1, 1, 1} ;
+double pacing_gain = 1.25;
+double drain = 0.75;
+std::vector<double> pacing_gain_cycle = {pacing_gain, drain, 1, 1, 1, 1, 1, 1} ;
 std::vector<uint64_t> past_values = {};
 bool isNewCycle; // NEW
+uint16_t my_counter = 0;
 
 TypeId
 TcpBbrAdaptive::GetTypeId (void)
@@ -530,37 +532,16 @@ TcpBbrAdaptive::UpdateRound (Ptr<TcpSocketState> tcb, const struct RateSample * 
     }
 }
 
-/*
-bool
-TcpBbrAdaptive::decreaseLength()
-{
-  if (pastVariance() > 2)
-  {
-    return true;
-  }
-  else
-  {
-    return false;
-  }
-}
-
-bool
-TcpBbrAdaptive::increaseLength()
-{
-  if (pastVariance() <= 2)
-  {
-    return true;
-  }
-  else 
-  {
-    return false;
-  }
-}
-*/
-
 void
 TcpBbrAdaptive::UpdateBtlBw (Ptr<TcpSocketState> tcb, const struct RateSample * rs)
 {
+  //NEW
+  double past_std;
+  double new_std;
+  bool my_condition;
+  bool decreaseLength;
+  bool increaseLength;
+
   NS_LOG_FUNCTION (this << tcb << rs);
   if (rs->m_deliveryRate == 0)
     {
@@ -568,36 +549,62 @@ TcpBbrAdaptive::UpdateBtlBw (Ptr<TcpSocketState> tcb, const struct RateSample * 
     }
 
   UpdateRound (tcb, rs);
-  double past_std;
-  double new_std;
-  //NEW
+
+  // my_condition is true every 3 cycles
+  if (my_counter % 3 == 0)
+  {
+    my_condition = true;
+    my_counter = 1;    
+  }
+  else 
+  {
+  	my_condition = false;
+  	my_counter += 1;
+  }
+
   if (!rs->m_isAppLimited)
   {
-    uint64_t temp = rs->m_deliveryRate.GetBitRate ();
-    past_std = computeStd(past_values);
-    past_values.push_back(temp); //add an element at the end
+    if (my_condition)
+    {
+      past_std = computeStd(past_values);
+    }
+   
+    past_values.push_back(rs->m_deliveryRate.GetBitRate ()); //add an element at the end
 
     if (past_values.size() > MY_SIZE)
     {
       past_values.erase(past_values.begin()); //remove expired values
     }
-    new_std = computeStd(past_values);
+    if (my_condition)
+    {
+      new_std = computeStd(past_values);
+    }
   }
+
+  if ( (rs->m_deliveryRate.GetBitRate () >= 1.20*m_maxBwFilter.GetBest().GetBitRate () && pacing_gain < 1.90) || !rs->m_isAppLimited)
+    {
+      pacing_gain += 0.15;
+      drain -= 0.15;
+    }
+  else
+    {
+      pacing_gain = 1.25;
+      drain = 0.75;
+    }
 
   if (rs->m_deliveryRate >= m_maxBwFilter.GetBest () || !rs->m_isAppLimited)
     {
       m_maxBwFilter.Update (rs->m_deliveryRate, m_roundCount);
     }
 
+  increaseLength = (new_std/past_std < 0.75 && my_condition) ? true : false;
+  decreaseLength = (new_std/past_std > 2 && my_condition) ? true : false;
 
-  bool increaseLength = (new_std/past_std < 0.75) ? true : false;
-  bool decreaseLength = (new_std/past_std > 2) ? true : false; 
-
-  if (isNewCycle && increaseLength && pacing_gain_cycle.size() < 8 && past_values.size() == 100){ //the cycle can't grow too much
-    pacing_gain_cycle.push_back(1.0);
+  if (isNewCycle && increaseLength && pacing_gain_cycle.size() < 8 && past_values.size() == MY_SIZE){
+    pacing_gain_cycle.push_back(1.0); //stretch the cycle (the cycle can't grow too much)
   }
-  if (isNewCycle && decreaseLength && pacing_gain_cycle.size() > 4 && past_values.size() == 100){ //the cycle can't shrink too much
-    pacing_gain_cycle.pop_back();
+  if (isNewCycle && decreaseLength && pacing_gain_cycle.size() > 4 && past_values.size() == MY_SIZE){
+    pacing_gain_cycle.pop_back(); //shrink the cycle (the cycle can't shrink too much)
   }
 }
 
@@ -622,7 +629,7 @@ TcpBbrAdaptive::UpdateControlParameters (Ptr<TcpSocketState> tcb, const struct R
   SetCwnd (tcb, rs);
 }
 
-std::string
+std::string 
 TcpBbrAdaptive::WhichState (BbrMode_t mode) const
 {
   switch (mode)

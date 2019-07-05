@@ -45,8 +45,11 @@ public:
    */
   //const static double PACING_GAIN_CYCLE [];
   std::vector<double> pacing_gain_cycle;
+  double pacing_gain; // NEW
+  double drain;   // NEW
   std::vector<uint64_t> past_values;
   const static uint32_t MY_SIZE = 10;
+  uint16_t my_counter;
 
   /**
    * \brief Get the type ID.
