@@ -581,7 +581,7 @@ TcpBbrAdaptive::UpdateBtlBw (Ptr<TcpSocketState> tcb, const struct RateSample * 
     }
   }
 
-  if ( (rs->m_deliveryRate.GetBitRate () >= 1.20*m_maxBwFilter.GetBest().GetBitRate () && pacing_gain < 1.90) || !rs->m_isAppLimited)
+  if ( (rs->m_deliveryRate.GetBitRate () >= 1.20*m_maxBwFilter.GetBest().GetBitRate () && pacing_gain < 1.80) || !rs->m_isAppLimited)
     {
       pacing_gain += 0.15;
       drain -= 0.15;
