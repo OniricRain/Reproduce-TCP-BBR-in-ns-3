@@ -20,48 +20,48 @@
  *          Mohit P. Tahiliani <tahiliani@nitk.edu.in>
  */
 
-#include "tcp-bbr-adaptiveD.h"
+#include "tcp-bbr-adaptiveI.h"
 #include "ns3/log.h"
 #include "ns3/tcp-socket-base.h"
 
 namespace ns3 {
 
-NS_LOG_COMPONENT_DEFINE ("TcpBbrAdaptiveD");
-NS_OBJECT_ENSURE_REGISTERED (TcpBbrAdaptiveD);
+NS_LOG_COMPONENT_DEFINE ("TcpBbrAdaptiveI");
+NS_OBJECT_ENSURE_REGISTERED (TcpBbrAdaptiveI);
 
-double pacing_gainD = 1.25;
-double drainD = 0.75;
-std::vector<double> pacing_gain_cycleD = {pacing_gainD, drainD, 1, 1, 1, 1, 1, 1} ;
-std::vector<uint64_t> past_valuesD = {};
-bool isNewCycleD; // NEW
-uint16_t my_counterD = 0;
+double pacing_gainI = 1.25;
+double drainI = 0.75;
+std::vector<double> pacing_gain_cycleI = {pacing_gainI, drainI, 1, 1, 1, 1, 1, 1} ;
+std::vector<uint64_t> past_valuesI = {};
+bool isNewCycleI; // NEW
+uint16_t my_counterI = 0;
 
 TypeId
-TcpBbrAdaptiveD::GetTypeId (void)
+TcpBbrAdaptiveI::GetTypeId (void)
 {
-  static TypeId tid = TypeId ("ns3::TcpBbrAdaptiveD")
+  static TypeId tid = TypeId ("ns3::TcpBbrAdaptiveI")
     .SetParent<TcpCongestionOps> ()
-    .AddConstructor<TcpBbrAdaptiveD> ()
+    .AddConstructor<TcpBbrAdaptiveI> ()
     .SetGroupName ("Internet")
     .AddAttribute ("HighGain",
                    "Value of high gain",
                    DoubleValue (2.89),
-                   MakeDoubleAccessor (&TcpBbrAdaptiveD::m_highGain),
+                   MakeDoubleAccessor (&TcpBbrAdaptiveI::m_highGain),
                    MakeDoubleChecker<double> ())
     .AddAttribute ("BwWindowLength",
                    "Length of bandwidth windowed filter",
                    UintegerValue (10),
-                   MakeUintegerAccessor (&TcpBbrAdaptiveD::m_bandwidthWindowLength),
+                   MakeUintegerAccessor (&TcpBbrAdaptiveI::m_bandwidthWindowLength),
                    MakeUintegerChecker<uint32_t> ())
     .AddAttribute ("RttWindowLength",
                    "Length of bandwidth windowed filter",
                    TimeValue (Seconds (10)),
-                   MakeTimeAccessor (&TcpBbrAdaptiveD::m_rtPropFilterLen),
+                   MakeTimeAccessor (&TcpBbrAdaptiveI::m_rtPropFilterLen),
                    MakeTimeChecker ())
     .AddAttribute ("ProbeRttDuration",
                    "Length of bandwidth windowed filter",
                    TimeValue (MilliSeconds (200)),
-                   MakeTimeAccessor (&TcpBbrAdaptiveD::m_probeRttDuration),
+                   MakeTimeAccessor (&TcpBbrAdaptiveI::m_probeRttDuration),
                    MakeTimeChecker ())
   ;
   return tid;
@@ -69,7 +69,7 @@ TcpBbrAdaptiveD::GetTypeId (void)
 
 //NEW: compute mean
 double
-TcpBbrAdaptiveD::computeMean(std::vector<uint64_t> vec) {
+TcpBbrAdaptiveI::computeMean(std::vector<uint64_t> vec) {
     double sum = 0;
     for(double a : vec)
         sum += a;
@@ -77,7 +77,7 @@ TcpBbrAdaptiveD::computeMean(std::vector<uint64_t> vec) {
 }
 //NEW: compute standard deviation
 double 
-TcpBbrAdaptiveD::computeStd(std::vector<uint64_t> vec) {
+TcpBbrAdaptiveI::computeStd(std::vector<uint64_t> vec) {
     double mean = computeMean(vec);
     double temp = 0;
     for(double a :vec)
@@ -86,14 +86,14 @@ TcpBbrAdaptiveD::computeStd(std::vector<uint64_t> vec) {
     return std::sqrt(var);
 }
 
-TcpBbrAdaptiveD::TcpBbrAdaptiveD ()
+TcpBbrAdaptiveI::TcpBbrAdaptiveI ()
   : TcpCongestionOps ()
 {
   NS_LOG_FUNCTION (this);
   m_uv = CreateObject<UniformRandomVariable> ();
 }
 
-TcpBbrAdaptiveD::TcpBbrAdaptiveD (const TcpBbrAdaptiveD &sock)
+TcpBbrAdaptiveI::TcpBbrAdaptiveI (const TcpBbrAdaptiveI &sock)
   : TcpCongestionOps (sock),
     m_bandwidthWindowLength (sock.m_bandwidthWindowLength),
     m_pacingGain (sock.m_pacingGain),
@@ -128,7 +128,7 @@ TcpBbrAdaptiveD::TcpBbrAdaptiveD (const TcpBbrAdaptiveD &sock)
 }
 
 int64_t
-TcpBbrAdaptiveD::AssignStreams (int64_t stream)
+TcpBbrAdaptiveI::AssignStreams (int64_t stream)
 {
   NS_LOG_FUNCTION (this << stream);
   m_uv->SetStream (stream);
@@ -136,7 +136,7 @@ TcpBbrAdaptiveD::AssignStreams (int64_t stream)
 }
 
 void
-TcpBbrAdaptiveD::InitRoundCounting ()
+TcpBbrAdaptiveI::InitRoundCounting ()
 {
   NS_LOG_FUNCTION (this);
   m_nextRoundDelivered = 0;
@@ -145,7 +145,7 @@ TcpBbrAdaptiveD::InitRoundCounting ()
 }
 
 void
-TcpBbrAdaptiveD::InitFullPipe ()
+TcpBbrAdaptiveI::InitFullPipe ()
 {
   NS_LOG_FUNCTION (this);
   m_isPipeFilled = false;
@@ -154,7 +154,7 @@ TcpBbrAdaptiveD::InitFullPipe ()
 }
 
 void
-TcpBbrAdaptiveD::InitPacingRate (Ptr<TcpSocketState> tcb)
+TcpBbrAdaptiveI::InitPacingRate (Ptr<TcpSocketState> tcb)
 {
   NS_LOG_FUNCTION (this << tcb);
 
@@ -169,7 +169,7 @@ TcpBbrAdaptiveD::InitPacingRate (Ptr<TcpSocketState> tcb)
 }
 
 void
-TcpBbrAdaptiveD::EnterStartup ()
+TcpBbrAdaptiveI::EnterStartup ()
 {
   NS_LOG_FUNCTION (this);
   SetBbrState (BbrMode_t::BBR_STARTUP);
@@ -178,7 +178,7 @@ TcpBbrAdaptiveD::EnterStartup ()
 }
 
 void
-TcpBbrAdaptiveD::HandleRestartFromIdle (Ptr<TcpSocketState> tcb, const RateSample * rs)
+TcpBbrAdaptiveI::HandleRestartFromIdle (Ptr<TcpSocketState> tcb, const RateSample * rs)
 {
   NS_LOG_FUNCTION (this << tcb << rs);
   if (tcb->m_bytesInFlight == 0 && rs->m_isAppLimited)
@@ -192,7 +192,7 @@ TcpBbrAdaptiveD::HandleRestartFromIdle (Ptr<TcpSocketState> tcb, const RateSampl
 }
 
 void
-TcpBbrAdaptiveD::SetPacingRate (Ptr<TcpSocketState> tcb, double gain)
+TcpBbrAdaptiveI::SetPacingRate (Ptr<TcpSocketState> tcb, double gain)
 {
   NS_LOG_FUNCTION (this << tcb << gain);
   DataRate rate (gain * m_maxBwFilter.GetBest ().GetBitRate ());
@@ -204,7 +204,7 @@ TcpBbrAdaptiveD::SetPacingRate (Ptr<TcpSocketState> tcb, double gain)
 }
 
 uint32_t
-TcpBbrAdaptiveD::InFlight (Ptr<TcpSocketState> tcb, double gain)
+TcpBbrAdaptiveI::InFlight (Ptr<TcpSocketState> tcb, double gain)
 {
   NS_LOG_FUNCTION (this << tcb << gain);
   if (m_rtProp == Time::Max ())
@@ -217,16 +217,16 @@ TcpBbrAdaptiveD::InFlight (Ptr<TcpSocketState> tcb, double gain)
 }
 
 void
-TcpBbrAdaptiveD::AdvanceCyclePhase ()
+TcpBbrAdaptiveI::AdvanceCyclePhase ()
 {
   NS_LOG_FUNCTION (this);
   m_cycleStamp = Simulator::Now ();
-  m_cycleIndex = (m_cycleIndex + 1) % pacing_gain_cycleD.size();
-  m_pacingGain = pacing_gain_cycleD [m_cycleIndex];
+  m_cycleIndex = (m_cycleIndex + 1) % pacing_gain_cycleI.size();
+  m_pacingGain = pacing_gain_cycleI [m_cycleIndex];
 }
 
 bool
-TcpBbrAdaptiveD::IsNextCycle () // NEW to control if a new cycle has started
+TcpBbrAdaptiveI::IsNextCycle () // NEW to control if a new cycle has started
 {
   NS_LOG_FUNCTION (this);
   if (m_cycleIndex == 0) // check on the index of the cycle
@@ -240,7 +240,7 @@ TcpBbrAdaptiveD::IsNextCycle () // NEW to control if a new cycle has started
 }
 
 bool
-TcpBbrAdaptiveD::IsNextCyclePhase (Ptr<TcpSocketState> tcb, const struct RateSample * rs)
+TcpBbrAdaptiveI::IsNextCyclePhase (Ptr<TcpSocketState> tcb, const struct RateSample * rs)
 {
   NS_LOG_FUNCTION (this << tcb << rs);
   bool isFullLength = (Simulator::Now () - m_cycleStamp) > m_rtProp;
@@ -259,18 +259,18 @@ TcpBbrAdaptiveD::IsNextCyclePhase (Ptr<TcpSocketState> tcb, const struct RateSam
 }
 
 void
-TcpBbrAdaptiveD::CheckCyclePhase (Ptr<TcpSocketState> tcb, const struct RateSample * rs)
+TcpBbrAdaptiveI::CheckCyclePhase (Ptr<TcpSocketState> tcb, const struct RateSample * rs)
 {
   NS_LOG_FUNCTION (this << tcb << rs);
   if (m_state == BbrMode_t::BBR_PROBE_BW && IsNextCyclePhase (tcb, rs))
     {
       AdvanceCyclePhase ();
-      isNewCycleD = IsNextCycle();
+      isNewCycleI = IsNextCycle();
     }
 }
 
 void
-TcpBbrAdaptiveD::CheckFullPipe (const struct RateSample * rs)
+TcpBbrAdaptiveI::CheckFullPipe (const struct RateSample * rs)
 {
   NS_LOG_FUNCTION (this << rs);
   if (m_isPipeFilled || !m_roundStart || rs->m_isAppLimited)
@@ -295,7 +295,7 @@ TcpBbrAdaptiveD::CheckFullPipe (const struct RateSample * rs)
 }
 
 void
-TcpBbrAdaptiveD::EnterDrain ()
+TcpBbrAdaptiveI::EnterDrain ()
 {
   NS_LOG_FUNCTION (this);
   SetBbrState (BbrMode_t::BBR_DRAIN);
@@ -304,19 +304,19 @@ TcpBbrAdaptiveD::EnterDrain ()
 }
 
 void
-TcpBbrAdaptiveD::EnterProbeBW ()
+TcpBbrAdaptiveI::EnterProbeBW ()
 {
   NS_LOG_FUNCTION (this);
   SetBbrState (BbrMode_t::BBR_PROBE_BW);
   m_pacingGain = 1;
   m_cWndGain = 2;
-  m_cycleIndex = pacing_gain_cycleD.size() - 1 - (int) m_uv->GetValue (0, pacing_gain_cycleD.size());// Modification: If pacing_gain_cycleD size goes under 8 this still holds
+  m_cycleIndex = pacing_gain_cycleI.size() - 1 - (int) m_uv->GetValue (0, pacing_gain_cycleI.size());// Modification: If pacing_gain_cycleI size goes under 8 this still holds
   AdvanceCyclePhase ();
   // IsNextCycle(); ??? FIXME:Consider if legit
 }
 
 void
-TcpBbrAdaptiveD::CheckDrain (Ptr<TcpSocketState> tcb)
+TcpBbrAdaptiveI::CheckDrain (Ptr<TcpSocketState> tcb)
 {
   NS_LOG_FUNCTION (this << tcb);
   if (m_state == BbrMode_t::BBR_STARTUP && m_isPipeFilled)
@@ -331,7 +331,7 @@ TcpBbrAdaptiveD::CheckDrain (Ptr<TcpSocketState> tcb)
 }
 
 void
-TcpBbrAdaptiveD::UpdateRTprop (Ptr<TcpSocketState> tcb)
+TcpBbrAdaptiveI::UpdateRTprop (Ptr<TcpSocketState> tcb)
 {
   NS_LOG_FUNCTION (this << tcb);
   m_rtPropExpired = Simulator::Now () > (m_rtPropStamp + m_rtPropFilterLen);
@@ -343,7 +343,7 @@ TcpBbrAdaptiveD::UpdateRTprop (Ptr<TcpSocketState> tcb)
 }
 
 void
-TcpBbrAdaptiveD::EnterProbeRTT ()
+TcpBbrAdaptiveI::EnterProbeRTT ()
 {
   NS_LOG_FUNCTION (this);
   SetBbrState (BbrMode_t::BBR_PROBE_RTT);
@@ -352,7 +352,7 @@ TcpBbrAdaptiveD::EnterProbeRTT ()
 }
 
 void
-TcpBbrAdaptiveD::SaveCwnd (Ptr<const TcpSocketState> tcb)
+TcpBbrAdaptiveI::SaveCwnd (Ptr<const TcpSocketState> tcb)
 {
   NS_LOG_FUNCTION (this << tcb);
   if (tcb->m_congState != TcpSocketState::CA_RECOVERY && m_state != BbrMode_t::BBR_PROBE_RTT)
@@ -366,14 +366,14 @@ TcpBbrAdaptiveD::SaveCwnd (Ptr<const TcpSocketState> tcb)
 }
 
 void
-TcpBbrAdaptiveD::RestoreCwnd (Ptr<TcpSocketState> tcb)
+TcpBbrAdaptiveI::RestoreCwnd (Ptr<TcpSocketState> tcb)
 {
   NS_LOG_FUNCTION (this << tcb);
   tcb->m_cWnd = std::max (m_priorCwnd, tcb->m_cWnd.Get ());
 }
 
 void
-TcpBbrAdaptiveD::ExitProbeRTT ()
+TcpBbrAdaptiveI::ExitProbeRTT ()
 {
   NS_LOG_FUNCTION (this);
   if (m_isPipeFilled)
@@ -387,7 +387,7 @@ TcpBbrAdaptiveD::ExitProbeRTT ()
 }
 
 void
-TcpBbrAdaptiveD::HandleProbeRTT (Ptr<TcpSocketState> tcb)
+TcpBbrAdaptiveI::HandleProbeRTT (Ptr<TcpSocketState> tcb)
 {
   NS_LOG_FUNCTION (this << tcb);
   tcb->m_appLimited = (tcb->m_delivered + tcb->m_bytesInFlight) ? : 1;
@@ -414,7 +414,7 @@ TcpBbrAdaptiveD::HandleProbeRTT (Ptr<TcpSocketState> tcb)
 }
 
 void
-TcpBbrAdaptiveD::CheckProbeRTT (Ptr<TcpSocketState> tcb)
+TcpBbrAdaptiveI::CheckProbeRTT (Ptr<TcpSocketState> tcb)
 {
   NS_LOG_FUNCTION (this << tcb);
   NS_LOG_DEBUG (Simulator::Now () << "WhichState " << WhichState (m_state) << " m_rtPropExpired " << m_rtPropExpired << " !m_idleRestart " << !m_idleRestart);
@@ -434,7 +434,7 @@ TcpBbrAdaptiveD::CheckProbeRTT (Ptr<TcpSocketState> tcb)
 }
 
 void
-TcpBbrAdaptiveD::SetSendQuantum (Ptr<TcpSocketState> tcb)
+TcpBbrAdaptiveI::SetSendQuantum (Ptr<TcpSocketState> tcb)
 {
   NS_LOG_FUNCTION (this << tcb);
   m_sendQuantum = 1 * tcb->m_segmentSize;
@@ -455,14 +455,14 @@ TcpBbrAdaptiveD::SetSendQuantum (Ptr<TcpSocketState> tcb)
 }
 
 void
-TcpBbrAdaptiveD::UpdateTargetCwnd (Ptr<TcpSocketState> tcb)
+TcpBbrAdaptiveI::UpdateTargetCwnd (Ptr<TcpSocketState> tcb)
 {
   NS_LOG_FUNCTION (this << tcb);
   m_targetCWnd = InFlight (tcb, m_cWndGain);
 }
 
 void
-TcpBbrAdaptiveD::ModulateCwndForRecovery (Ptr<TcpSocketState> tcb, const struct RateSample * rs)
+TcpBbrAdaptiveI::ModulateCwndForRecovery (Ptr<TcpSocketState> tcb, const struct RateSample * rs)
 {
   NS_LOG_FUNCTION (this << tcb << rs);
   if ( rs->m_packetLoss > 0)
@@ -477,7 +477,7 @@ TcpBbrAdaptiveD::ModulateCwndForRecovery (Ptr<TcpSocketState> tcb, const struct 
 }
 
 void
-TcpBbrAdaptiveD::ModulateCwndForProbeRTT (Ptr<TcpSocketState> tcb)
+TcpBbrAdaptiveI::ModulateCwndForProbeRTT (Ptr<TcpSocketState> tcb)
 {
   NS_LOG_FUNCTION (this << tcb);
   if (m_state == BbrMode_t::BBR_PROBE_RTT)
@@ -487,7 +487,7 @@ TcpBbrAdaptiveD::ModulateCwndForProbeRTT (Ptr<TcpSocketState> tcb)
 }
 
 void
-TcpBbrAdaptiveD::SetCwnd (Ptr<TcpSocketState> tcb, const struct RateSample * rs)
+TcpBbrAdaptiveI::SetCwnd (Ptr<TcpSocketState> tcb, const struct RateSample * rs)
 {
   NS_LOG_FUNCTION (this << tcb << rs);
   UpdateTargetCwnd (tcb);
@@ -517,7 +517,7 @@ TcpBbrAdaptiveD::SetCwnd (Ptr<TcpSocketState> tcb, const struct RateSample * rs)
 }
 
 void
-TcpBbrAdaptiveD::UpdateRound (Ptr<TcpSocketState> tcb, const struct RateSample * rs)
+TcpBbrAdaptiveI::UpdateRound (Ptr<TcpSocketState> tcb, const struct RateSample * rs)
 {
   NS_LOG_FUNCTION (this << tcb << rs);
   if (tcb->m_txItemDelivered >= m_nextRoundDelivered)
@@ -533,14 +533,16 @@ TcpBbrAdaptiveD::UpdateRound (Ptr<TcpSocketState> tcb, const struct RateSample *
 }
 
 void
-TcpBbrAdaptiveD::UpdateBtlBw (Ptr<TcpSocketState> tcb, const struct RateSample * rs)
+TcpBbrAdaptiveI::UpdateBtlBw (Ptr<TcpSocketState> tcb, const struct RateSample * rs)
 {
   //NEW
+  /*
   double past_std;
   double new_std;
   bool my_condition;
   bool decreaseLength;
   bool increaseLength;
+  */
 
   NS_LOG_FUNCTION (this << tcb << rs);
   if (rs->m_deliveryRate == 0)
@@ -551,66 +553,67 @@ TcpBbrAdaptiveD::UpdateBtlBw (Ptr<TcpSocketState> tcb, const struct RateSample *
   UpdateRound (tcb, rs);
 
   // my_condition is true every 3 cycles
-  if (my_counterD % 3 == 0)
+  /*if (my_counterI % 3 == 0)
   {
     my_condition = true;
-    my_counterD = 1;    
+    my_counterI = 1;    
   }
   else 
   {
   	my_condition = false;
-  	my_counterD += 1;
+  	my_counterI += 1;
   }
-
+*/
   if (!rs->m_isAppLimited)
   {
-    if (my_condition)
+    /*if (my_condition)
     {
-      past_std = computeStd(past_valuesD);
-    }
+      past_std = computeStd(past_valuesI);
+    }*/
    
-    past_valuesD.push_back(rs->m_deliveryRate.GetBitRate ()); //add an element at the end
+    past_valuesI.push_back(rs->m_deliveryRate.GetBitRate ()); //add an element at the end
 
-    if (past_valuesD.size() > MY_SIZED)
+    if (past_valuesI.size() > MY_SIZEI)
     {
-      past_valuesD.erase(past_valuesD.begin()); //remove expired values
+      past_valuesI.erase(past_valuesI.begin()); //remove expired values
     }
-    if (my_condition)
+    /*if (my_condition)
     {
-      new_std = computeStd(past_valuesD);
-    }
+      new_std = computeStd(past_valuesI);
+    }*/
   }
-/*
-  if ( (rs->m_deliveryRate.GetBitRate () >= 1.20*m_maxBwFilter.GetBest().GetBitRate () && pacing_gain < 1.80) || !rs->m_isAppLimited)
+
+  if ( (rs->m_deliveryRate.GetBitRate () >= 1.20*m_maxBwFilter.GetBest().GetBitRate () && pacing_gainI < 1.80) || !rs->m_isAppLimited)
     {
-      pacing_gain += 0.15;
-      drain -= 0.15;
+      pacing_gainI += 0.15;
+      drainI -= 0.15;
     }
   else
     {
-      pacing_gain = 1.25;
-      drain = 0.75;
+      pacing_gainI = 1.25;
+      drainI = 0.75;
     }
-    */
 
   if (rs->m_deliveryRate >= m_maxBwFilter.GetBest () || !rs->m_isAppLimited)
     {
       m_maxBwFilter.Update (rs->m_deliveryRate, m_roundCount);
     }
 
+/*
   increaseLength = (new_std/past_std < 0.75 && my_condition) ? true : false;
   decreaseLength = (new_std/past_std > 2 && my_condition) ? true : false;
 
-  if (isNewCycleD && increaseLength && pacing_gain_cycleD.size() < 8 && past_valuesD.size() == MY_SIZED){
-    pacing_gain_cycleD.push_back(1.0); //stretch the cycle (the cycle can't grow too much)
+  if (isNewCycleI && increaseLength && pacing_gain_cycleI.size() < 8 && past_valuesI.size() == MY_SIZEI){
+    pacing_gain_cycleI.push_back(1.0); //stretch the cycle (the cycle can't grow too much)
   }
-  if (isNewCycleD && decreaseLength && pacing_gain_cycleD.size() > 4 && past_valuesD.size() == MY_SIZED){
-    pacing_gain_cycleD.pop_back(); //shrink the cycle (the cycle can't shrink too much)
-  }
+  if (isNewCycleI && decreaseLength && pacing_gain_cycleI.size() > 4 && past_valuesI.size() == MY_SIZEI){
+    pacing_gain_cycleI.pop_back(); //shrink the cycle (the cycle can't shrink too much)
+  }*/
 }
 
+
 void
-TcpBbrAdaptiveD::UpdateModelAndState (Ptr<TcpSocketState> tcb, const struct RateSample * rs)
+TcpBbrAdaptiveI::UpdateModelAndState (Ptr<TcpSocketState> tcb, const struct RateSample * rs)
 {
   NS_LOG_FUNCTION (this << tcb << rs);
   UpdateBtlBw (tcb, rs);
@@ -622,7 +625,7 @@ TcpBbrAdaptiveD::UpdateModelAndState (Ptr<TcpSocketState> tcb, const struct Rate
 }
 
 void
-TcpBbrAdaptiveD::UpdateControlParameters (Ptr<TcpSocketState> tcb, const struct RateSample * rs)
+TcpBbrAdaptiveI::UpdateControlParameters (Ptr<TcpSocketState> tcb, const struct RateSample * rs)
 {
   NS_LOG_FUNCTION (this << tcb << rs);
   SetPacingRate (tcb, m_pacingGain);
@@ -631,7 +634,7 @@ TcpBbrAdaptiveD::UpdateControlParameters (Ptr<TcpSocketState> tcb, const struct 
 }
 
 std::string 
-TcpBbrAdaptiveD::WhichState (BbrMode_t mode) const
+TcpBbrAdaptiveI::WhichState (BbrMode_t mode) const
 {
   switch (mode)
     {
@@ -648,7 +651,7 @@ TcpBbrAdaptiveD::WhichState (BbrMode_t mode) const
 }
 
 void
-TcpBbrAdaptiveD::SetBbrState (BbrMode_t mode)
+TcpBbrAdaptiveI::SetBbrState (BbrMode_t mode)
 {
   NS_LOG_FUNCTION (this << mode);
   NS_LOG_DEBUG (Simulator::Now () << " Changing from " << WhichState (m_state) << " to " << WhichState (mode));
@@ -656,41 +659,41 @@ TcpBbrAdaptiveD::SetBbrState (BbrMode_t mode)
 }
 
 uint32_t
-TcpBbrAdaptiveD::GetBbrState ()
+TcpBbrAdaptiveI::GetBbrState ()
 {
   NS_LOG_FUNCTION (this);
   return m_state;
 }
 
 double
-TcpBbrAdaptiveD::GetCwndGain ()
+TcpBbrAdaptiveI::GetCwndGain ()
 {
   NS_LOG_FUNCTION (this);
   return m_cWndGain;
 }
 
 double
-TcpBbrAdaptiveD::GetPacingGain ()
+TcpBbrAdaptiveI::GetPacingGain ()
 {
   NS_LOG_FUNCTION (this);
   return m_pacingGain;
 }
 
 std::string
-TcpBbrAdaptiveD::GetName () const
+TcpBbrAdaptiveI::GetName () const
 {
-  return "TcpBbrAdaptiveD";
+  return "TcpBbrAdaptiveI";
 }
 
 bool
-TcpBbrAdaptiveD::HasCongControl () const
+TcpBbrAdaptiveI::HasCongControl () const
 {
   NS_LOG_FUNCTION (this);
   return true;
 }
 
 void
-TcpBbrAdaptiveD::PktsAcked (Ptr<TcpSocketState> tcb, uint32_t segmentsAcked,
+TcpBbrAdaptiveI::PktsAcked (Ptr<TcpSocketState> tcb, uint32_t segmentsAcked,
                         const Time& rtt)
 {
   NS_LOG_FUNCTION (this << tcb << segmentsAcked << rtt);
@@ -698,7 +701,7 @@ TcpBbrAdaptiveD::PktsAcked (Ptr<TcpSocketState> tcb, uint32_t segmentsAcked,
 }
 
 void
-TcpBbrAdaptiveD::CongControl (Ptr<TcpSocketState> tcb, const struct RateSample *rs)
+TcpBbrAdaptiveI::CongControl (Ptr<TcpSocketState> tcb, const struct RateSample *rs)
 {
   NS_LOG_FUNCTION (this << tcb << rs);
   UpdateModelAndState (tcb, rs);
@@ -706,7 +709,7 @@ TcpBbrAdaptiveD::CongControl (Ptr<TcpSocketState> tcb, const struct RateSample *
 }
 
 void
-TcpBbrAdaptiveD::CongestionStateSet (Ptr<TcpSocketState> tcb,
+TcpBbrAdaptiveI::CongestionStateSet (Ptr<TcpSocketState> tcb,
                             const TcpSocketState::TcpCongState_t newState)
 {
   NS_LOG_FUNCTION (this << tcb << newState);
@@ -745,7 +748,7 @@ TcpBbrAdaptiveD::CongestionStateSet (Ptr<TcpSocketState> tcb,
 }
 
 void
-TcpBbrAdaptiveD::CwndEvent (Ptr<TcpSocketState> tcb,
+TcpBbrAdaptiveI::CwndEvent (Ptr<TcpSocketState> tcb,
                    const TcpSocketState::TcpCAEvent_t event)
 {
   NS_LOG_FUNCTION (this << tcb << event);
@@ -770,7 +773,7 @@ TcpBbrAdaptiveD::CwndEvent (Ptr<TcpSocketState> tcb,
 }
 
 uint32_t
-TcpBbrAdaptiveD::GetSsThresh (Ptr<const TcpSocketState> tcb, uint32_t bytesInFlight)
+TcpBbrAdaptiveI::GetSsThresh (Ptr<const TcpSocketState> tcb, uint32_t bytesInFlight)
 {
   NS_LOG_FUNCTION (this << tcb << bytesInFlight);
   SaveCwnd (tcb);
@@ -778,9 +781,9 @@ TcpBbrAdaptiveD::GetSsThresh (Ptr<const TcpSocketState> tcb, uint32_t bytesInFli
 }
 
 Ptr<TcpCongestionOps>
-TcpBbrAdaptiveD::Fork (void)
+TcpBbrAdaptiveI::Fork (void)
 {
-  return CopyObject<TcpBbrAdaptiveD> (this);
+  return CopyObject<TcpBbrAdaptiveI> (this);
 }
 
 } // namespace ns3

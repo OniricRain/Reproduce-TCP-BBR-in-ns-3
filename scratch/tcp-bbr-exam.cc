@@ -193,7 +193,7 @@ int main (int argc, char *argv[])
   cmd.AddValue ("transport_prot", "Transport protocol to use: TcpNewReno, "
                 "TcpHybla, TcpHighSpeed, TcpHtcp, TcpVegas, TcpScalable, TcpVeno, "
                 "TcpBic, TcpYeah, TcpIllinois, TcpWestwood, TcpWestwoodPlus, TcpLedbat, "
-                "TcpLp, TcpBbr, TcpBbrAdaptive", transport_prot);
+                "TcpLp, TcpBbr, TcpBbrAdaptive, TcpBbrAdaptiveD, TcpBbrAdaptiveI ", transport_prot);
   cmd.Parse (argc,argv);
 
   // Calculate the ADU size

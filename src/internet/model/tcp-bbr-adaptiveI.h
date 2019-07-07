@@ -20,8 +20,8 @@
  *          Mohit P. Tahiliani <tahiliani@nitk.edu.in>
  */
 
-#ifndef TcpBbrAdaptiveD_H
-#define TcpBbrAdaptiveD_H
+#ifndef TcpBbrAdaptiveI_H
+#define TcpBbrAdaptiveI_H
 
 #include "ns3/tcp-congestion-ops.h"
 #include "ns3/traced-value.h"
@@ -31,7 +31,7 @@
 
 namespace ns3 {
 
-class TcpBbrAdaptiveD : public TcpCongestionOps
+class TcpBbrAdaptiveI : public TcpCongestionOps
 {
 public:
   /**
@@ -45,12 +45,12 @@ public:
    */
   //const static double PACING_GAIN_CYCLE [];
   
-  std::vector<double> pacing_gain_cycleD;
-  double pacing_gainD; // NEW
-  double drainD;   // NEW
-  std::vector<uint64_t> past_valuesD;
-  const static uint32_t MY_SIZED = 10;
-  uint16_t my_counterD;
+  std::vector<double> pacing_gain_cycleI;
+  double pacing_gainI; // NEW
+  double drainI;   // NEW
+  std::vector<uint64_t> past_valuesI;
+  const static uint32_t MY_SIZEI = 10;
+  uint16_t my_counterI;
 
   /**
    * \brief Get the type ID.
@@ -61,13 +61,13 @@ public:
   /**
    * \brief Constructor
    */
-  TcpBbrAdaptiveD ();
+  TcpBbrAdaptiveI ();
 
   /**
    * Copy constructor.
    * \param sock The socket to copy from.
    */
-  TcpBbrAdaptiveD (const TcpBbrAdaptiveD &sock);
+  TcpBbrAdaptiveI (const TcpBbrAdaptiveI &sock);
 
   /* BBR has the following modes for deciding how fast to send: */
   typedef enum
@@ -367,4 +367,4 @@ private:
 };
 
 } // namespace ns3
-#endif // TcpBbrAdaptiveD_H
+#endif // TcpBbrAdaptiveI_H
